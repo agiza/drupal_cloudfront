@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * Implementation of hook_install
+ */
+function cloudfront_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+		case 'mysqli':
+      $result_0 = db_query("CREATE TABLE {cloudfront_send_queue} (
+        item_id INT(10) UNSIGNED NOT NULL PRIMARY KEY,
+        bucket VARCHAR(255) NOT NULL DEFAULT '',
+        distribution_url VARCHAR(255) NOT NULL DEFAULT '',
+        imagecache_preset_id INT(10) NOT NULL DEFAULT 0,
+        inserted INT(10) NOT NULL DEFAULT 0,
+        original_file_path VARCHAR(255) NOT NULL DEFAULT '',
+        upload_file_path VARCHAR(255) NOT NULL DEFAULT '',
+ 				INDEX (imagecache_preset_id, original_file_path) )
+        /*!40100 DEFAULT CHARACTER SET utf8 */
+      ");
+      $result_1 = db_query("CREATE TABLE {cloudfront_files} (
+        file_id INT(10) UNSIGNED NOT NULL PRIMARY KEY,
+        bucket VARCHAR(255) NOT NULL DEFAULT '',
+        created INT(10) NOT NULL DEFAULT 0,
+        distribution_url VARCHAR(255) NOT NULL DEFAULT '',
+        original_file_path VARCHAR(255) NOT NULL DEFAULT '',
+        imagecache_preset_id INT(10) NOT NULL DEFAULT 0, 
+				INDEX (imagecache_preset_id, original_file_path) )
+        /*!40100 DEFAULT CHARACTER SET utf8 */
+      ");
+      break;
+  }
+  
+	$result = ($result_0 && $result_1);
+
+  if ($result) {
+    drupal_set_message('CloudFront module was installed successfully');
+  }
+  else {
+    drupal_set_message('CloudFront module was unsuccessful. Unable to create tables.');
+  }
+  
+  return $result;
+}
+
+/**
+ * Implementation of hook_uninstall
+ */
+function cloudfront_uninstall() {
+  db_query('DROP TABLE {cloudfront_files}');
+  db_query('DROP TABLE {cloudfront_send_queue}');
+  
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+		case 'mysqli':
+      db_query("DELETE FROM {sequences} WHERE name = '{cloudfront_files}_file_id'");
+      db_query("DELETE FROM {sequences} WHERE name = '{cloudfront_send_queue}_item_id'");
+      break;
+  }
+}
